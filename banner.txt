@@ -21,3 +21,4 @@ Things that you may want to know:
    values are available. See .github/workflows/action.yml for list of values.
    Edit it if you need more.
 
+You have some examples of commands in your bash history (arrow up key).

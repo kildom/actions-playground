@@ -73,7 +73,8 @@ jobs:
           ./manage.sh conf
           echo "cd \"${{ github.workspace }}\"" >> job_vars
           sudo cp exit_job /usr/local/bin/
-          sudo cp job_vars /tmp/
+          cp job_vars /tmp/
+          cp bash_history ~/.bash_history
           mkfifo /tmp/log
           mkdir /tmp/artifact
           while true; do cat < /tmp/log; done &
