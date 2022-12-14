@@ -10,6 +10,9 @@ Things that you may want to know:
  * ". /tmp/job_vars" command will source all environment variables that
    are available inside a job. It will also change current directory to the
    job's workspace directory.
+ * "/tmp/log" FIFO allows you to send messages to the Action log, e.g.
+   "history > /tmp/log" will put your bash history on the log. This may
+   be useful for creating a workflow with commands that you used.
  * "GHCTX_***" environment variable sourced from "/tmp/job_vars" are taken
    from the GitHub Actions Contexts, e.g. "GHCTX_SECRETS_GITHUB_TOKEN"
    contains value from ${{ secrets.GITHUB_TOKEN }} context value. Not all

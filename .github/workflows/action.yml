@@ -71,10 +71,12 @@ jobs:
           echo "cd \"${{ github.workspace }}\"" >> job_vars
           sudo cp exit_job /usr/local/sbin/
           sudo cp job_vars /tmp/
+          mkfifo /tmp/log
       - name: READY TO CONNECT
         run: |
           echo You can now connect to to the server.
-      - name: Start
+      - name: Your work is here
         working-directory: /tmp/repo
         run: |
+          while true; do cat < /tmp/log; done &
           ./manage.sh start
