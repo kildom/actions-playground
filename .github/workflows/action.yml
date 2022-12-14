@@ -1,0 +1,80 @@
+name: Action
+on:
+  workflow_dispatch:
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: repo
+      - name: Move repo to tmp
+        run: |
+          mv repo /tmp/
+      - name: Install ZeroTier
+        working-directory: /tmp/repo
+        run: |
+          echo ----------------- INSTALL -----------------
+          sudo curl -s https://install.zerotier.com | sudo bash
+          echo ----------------- STOP SERVICE -----------------
+          sudo systemctl stop zerotier-one
+          sleep 5
+          echo ----------------- CREATE IDENTITY -----------------
+          echo -n "${{ secrets.IDENTITY }}" > identity.secret
+          zerotier-idtool getpublic identity.secret > identity.public
+          ls -la
+          md5sum identity.*
+          echo ----------------- ADJUST CONFIGURATION -----------------
+          sudo rm -f /var/lib/zerotier-one/identity.* /var/lib/zerotier-one/authtoken.secret /var/lib/zerotier-one/planet || true
+          sudo rm -Rf /var/lib/zerotier-one/controller.d /var/lib/zerotier-one/networks.d /var/lib/zerotier-one/peers.d || true
+          sudo mv identity.secret /var/lib/zerotier-one/
+          sudo mv identity.public /var/lib/zerotier-one/
+          sudo chown zerotier-one:zerotier-one /var/lib/zerotier-one/identity.secret
+          sudo chown zerotier-one:zerotier-one /var/lib/zerotier-one/identity.public
+          sudo chmod 600 /var/lib/zerotier-one/identity.secret
+          ls -la /var/lib/zerotier-one/
+          sudo md5sum /var/lib/zerotier-one/*
+          echo ----------------- START SERVICE -----------------
+          echo Start
+          sudo systemctl start zerotier-one
+          sleep 5
+          echo ----------------- JOIN NETWORK -----------------
+          sudo zerotier-cli join ${{ secrets.NETWORK_ID }}
+      - name: Create SSH Keys
+        working-directory: /tmp/repo
+        run: |
+          echo -n "${{ secrets.HOST_KEY }}" > host_key
+          echo -n "${{ secrets.CLIENT_KEY }}" > authorized_keys
+          chmod 600 host_key
+          ls -la
+          md5sum *
+      - name: Configuration
+        working-directory: /tmp/repo
+        run: |
+          #------------ Exported GitHub Actions context values starts here ------------
+          #
+          # For simple values use:
+          # export GHCTX_GITHUB_ACTOR='${{ github.actor }}'
+          #
+          # For more complex values you can use here documents syntax:
+          # export GHCTX_SECRETS_MY_SECRET=$(cat <<'EnDOfThIssTrIng'
+          # ${{ secrets.my_secret }}
+          # EnDOfThIssTrIng
+          # )
+          #
+          export GHCTX_GITHUB_WORKSPACE='${{ github.workspace }}'
+          export GHCTX_GITHUB_ACTOR='${{ github.actor }}'
+          export GHCTX_GITHUB_TOKEN='${{ github.token }}'
+          export GHCTX_SECRETS_GITHUB_TOKEN='${{ secrets.GITHUB_TOKEN }}'
+          #------------- Exported GitHub Actions context values ends here -------------
+          ./manage.sh conf
+          echo "cd \"${{ github.workspace }}\"" >> job_vars
+          sudo cp exit_job /usr/local/sbin/
+          sudo cp job_vars /tmp/
+      - name: READY TO CONNECT
+        run: |
+          echo You can now connect to to the server.
+      - name: Start
+        working-directory: /tmp/repo
+        run: |
+          ./manage.sh start
