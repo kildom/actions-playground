@@ -48,7 +48,7 @@ jobs:
           chmod 600 host_key
           ls -la
           md5sum *
-      - name: Configuration
+      - name: Your work starts here
         working-directory: /tmp/repo
         run: |
           #------------ Exported GitHub Actions context values starts here ------------
@@ -72,11 +72,5 @@ jobs:
           sudo cp exit_job /usr/local/sbin/
           sudo cp job_vars /tmp/
           mkfifo /tmp/log
-      - name: READY TO CONNECT
-        run: |
-          echo You can now connect to to the server.
-      - name: Your work is here
-        working-directory: /tmp/repo
-        run: |
           while true; do cat < /tmp/log; done &
           ./manage.sh start

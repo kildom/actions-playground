@@ -29,12 +29,13 @@
        ```
      * Or, you can use your existing public client keys from your `~/.ssh/` directory.
 1. Run the GitHub Action on your fork.
-1. Runner will be ready to connect when `READY TO CONNECT` step is done.
+1. Runner will be ready to connect when `Your work starts here` step is running.
 1. Accept new members of your private network at https://my.zerotier.com/. Newly assigned IP address of the runner will be needed later. If you don't see the address immediately, wait and refresh the page.
 1. Connect with ssh:
    ```
    ssh runner@<your runner ip address> -p 9852 -i <your client_key>
    ```
+1. After connecting, server will print some useful information. Read them.
 1. Inside SSH session, you can run the following command to end the GitHub Action:
    ```
    exit_job
