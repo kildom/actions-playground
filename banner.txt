@@ -13,6 +13,8 @@ Things that you may want to know:
  * "/tmp/log" FIFO allows you to send messages to the Action log, e.g.
    "history > /tmp/log" will put your bash history on the log. This may
    be useful for creating a workflow with commands that you used.
+ * "/tmp/artifact" directory will be available as an action artifact.
+   Put there anything you want to download later.
  * "GHCTX_***" environment variable sourced from "/tmp/job_vars" are taken
    from the GitHub Actions Contexts, e.g. "GHCTX_SECRETS_GITHUB_TOKEN"
    contains value from ${{ secrets.GITHUB_TOKEN }} context value. Not all

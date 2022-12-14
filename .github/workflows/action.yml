@@ -72,5 +72,12 @@ jobs:
           sudo cp exit_job /usr/local/sbin/
           sudo cp job_vars /tmp/
           mkfifo /tmp/log
+          mkdir /tmp/artifact
           while true; do cat < /tmp/log; done &
           ./manage.sh start
+      - name: Upload an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: /tmp/artifact/*
+          if-no-files-found: ignore
+          retention-days: 5
