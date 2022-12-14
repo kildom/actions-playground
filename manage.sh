@@ -21,7 +21,7 @@ elif [ "$1" == "conf" ]; then
 	awk '{sub("---SCRIPT_DIR---","'"$SCRIPT_DIR"'")}1' $SCRIPT_DIR/sshd.template.conf > $SCRIPT_DIR/sshd.conf
 	awk '{sub("---USER---","'`whoami`'")}1' $SCRIPT_DIR/exit_job.template > $SCRIPT_DIR/exit_job
 	chmod 755 $SCRIPT_DIR/exit_job
-	python $SCRIPT_DIR/copy_env.py $SCRIPT_DIR/job_vars
+	python3 $SCRIPT_DIR/copy_env.py $SCRIPT_DIR/job_vars
 
 elif [ "$1" == "all" ]; then
 

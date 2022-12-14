@@ -8,9 +8,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           path: repo
-      - name: Move repo to tmp
+      - name: Prepare job
         run: |
           mv repo /tmp/
+          echo "ZEROTIER_DIR=/var/lib/zerotier-one" >> $GITHUB_ENV
+          echo "ZEROTIER_OWNER=zerotier-one:zerotier-one" >> $GITHUB_ENV
+          echo "MD5=md5sum" >> $GITHUB_ENV
       - name: Install ZeroTier
         working-directory: /tmp/repo
         run: |
@@ -23,19 +26,19 @@ jobs:
           echo -n "${{ secrets.IDENTITY }}" > identity.secret
           zerotier-idtool getpublic identity.secret > identity.public
           ls -la
-          md5sum identity.*
+          $MD5 identity.*
           echo ----------------- ADJUST CONFIGURATION -----------------
-          sudo rm -f /var/lib/zerotier-one/identity.* /var/lib/zerotier-one/authtoken.secret /var/lib/zerotier-one/planet || true
-          sudo rm -Rf /var/lib/zerotier-one/controller.d /var/lib/zerotier-one/networks.d /var/lib/zerotier-one/peers.d || true
-          sudo mv identity.secret /var/lib/zerotier-one/
-          sudo mv identity.public /var/lib/zerotier-one/
-          sudo chown zerotier-one:zerotier-one /var/lib/zerotier-one/identity.secret
-          sudo chown zerotier-one:zerotier-one /var/lib/zerotier-one/identity.public
-          sudo chmod 600 /var/lib/zerotier-one/identity.secret
-          ls -la /var/lib/zerotier-one/
-          sudo md5sum /var/lib/zerotier-one/*
+          sudo rm -f "$ZEROTIER_DIR/"identity.* "$ZEROTIER_DIR/authtoken.secret" "$ZEROTIER_DIR/planet" || true
+          sudo rm -Rf "$ZEROTIER_DIR/controller.d" "$ZEROTIER_DIR/peers.d" || true
+          sudo ls -la "$ZEROTIER_DIR"
+          sudo mv identity.secret "$ZEROTIER_DIR/"
+          sudo mv identity.public "$ZEROTIER_DIR/"
+          sudo chown $ZEROTIER_OWNER "$ZEROTIER_DIR/identity.secret"
+          sudo chown $ZEROTIER_OWNER "$ZEROTIER_DIR/identity.public"
+          sudo chmod 600 "$ZEROTIER_DIR/identity.secret"
+          ls -la "$ZEROTIER_DIR"
+          sudo $MD5 "$ZEROTIER_DIR/"*
           echo ----------------- START SERVICE -----------------
-          echo Start
           sudo systemctl start zerotier-one
           sleep 5
           echo ----------------- JOIN NETWORK -----------------
@@ -47,7 +50,7 @@ jobs:
           echo -n "${{ secrets.CLIENT_KEY }}" > authorized_keys
           chmod 600 host_key
           ls -la
-          md5sum *
+          $MD5 *
       - name: Your work starts here
         working-directory: /tmp/repo
         run: |
@@ -69,7 +72,7 @@ jobs:
           #------------- Exported GitHub Actions context values ends here -------------
           ./manage.sh conf
           echo "cd \"${{ github.workspace }}\"" >> job_vars
-          sudo cp exit_job /usr/local/sbin/
+          sudo cp exit_job /usr/local/bin/
           sudo cp job_vars /tmp/
           mkfifo /tmp/log
           mkdir /tmp/artifact
