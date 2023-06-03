@@ -1,7 +1,7 @@
-/authorized_keys
-/client_key*
-/host_key*
-/identity.secret
-/sshd.conf
-/exit_job
-/job_vars
+/.venv/
+/client_key.zip
+/keys.zip
+/keys/
+/_temp/
+*.pyc
+/.vscode/

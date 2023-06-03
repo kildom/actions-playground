@@ -1,0 +1,7 @@
+echo "::warning::This will be visible as a warning in the log and action summary." > /tmp/log
+echo Token for this action is: `ghctx secrets.github_token`
+tar -czf $GH_ARTIFACT/some.tgz .
+history > $GH_ARTIFACT/history.txt
+history > /tmp/log
+. exit_job
+. load_job

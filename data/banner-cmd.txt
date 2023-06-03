@@ -1,0 +1,37 @@
+
+Hello!
+
+You can play with the runner now.
+
+Currently, PowerShell is not fully supported. Some of commands below may
+work only in cmd.
+
+exit_job
+    Exit current action job with success.
+
+load_job
+    Load environment variables that are available inside job steps, for
+    example variables starting with the "GITHUB_" prefix.
+
+\\.\pipe\log
+    A named pipe that redirects everything from it to the log on GitHub Action.
+    For example, the following command will print your history to log:
+
+        doskey /history > \\.\pipe\log
+
+%GH_ARTIFACT%
+    An environment variable set by "load_job" script containing a path.
+    Content of this directory will be published as a workflow artifact.
+    For example, you can compress and send current directory to the artifact:
+
+        tar -czf %GH_ARTIFACT%\workspace.tgz .
+
+    Artifact will be available only after successful finish of workflow run,
+    so you have to call "exit_job" when you're done.
+
+ghctx
+    Command outputs GitHub Actions context value. For example, show runner OS:
+
+        ghctx runner.os
+
+------------------------------------------------------------------------------

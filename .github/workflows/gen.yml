@@ -2,8 +2,66 @@ name: Generate New Keys
 on:
   workflow_dispatch:
 jobs:
-  action:
+  generate:
     runs-on: ubuntu-latest
     steps:
+      - uses: zerotier/github-action@v1.0.1
+        with:
+          network_id: ${{ secrets.NETWORK_ID }}
+          auth_token: ${{ secrets.ACCESS_TOKEN  }}
+      - uses: kildom/zerotier-management-action@v1.0.0
+        id: zerotier
+        with:
+          auth_token: ${{ secrets.ACCESS_TOKEN  }}
+          ip: '${{ secrets.IP }} ${{ vars.IP }}'
+          name: 'Actions Playground'
+      - name: Check environment
+        env:
+          PASSWORD: ${{ secrets.PASSWORD }}
+        run: |
+          if [ '${{ steps.zerotier.outputs.ip }}' != '${{ secrets.IP }}' ] && [ '${{ steps.zerotier.outputs.ip }}' != '${{ vars.IP }}' ]; then
+            echo Invalid IP address or not assigned correctly!
+            exit 1
+          fi
+          if [ ${#PASSWORD} -lt 10 ]; then
+            echo Password to short, use at least 10 characters.
+            exit 1
+          fi
       - uses: actions/checkout@v3
-      - run: echo TODO
+        with:
+          path: repo
+          fetch-depth: 0
+      - name: Generate keys
+        env:
+          PASSWORD: ${{ secrets.PASSWORD }}
+        run: |
+          pip install --user -r repo/scripts/requirements.txt
+          python repo/scripts/gen.py
+      - name: Setup git user
+        run: |
+          git config --global credential.helper ""
+          git config --global --add credential.helper store
+          echo "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com" >> ~/.git-credentials
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git config --global user.name "${{ github.actor }}"
+      - name: Create new orphan commit
+        run: |
+          mkdir keys-temp
+          cp -r repo/.git keys-temp/
+          cd keys-temp
+          git checkout --orphan=temp-branch
+          cd ..
+          mkdir keys
+          cp -r keys-temp/.git keys/
+      - name: Save keys
+        run: |
+          cp repo/keys/keys.zip keys/
+          cd keys
+          git add -A
+          git commit -m "Save encrypted keys"
+          git push --force origin temp-branch:keys
+      - name: Upload an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: repo/keys/client_key.zip
+          retention-days: 1

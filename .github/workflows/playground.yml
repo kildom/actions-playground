@@ -1,0 +1,276 @@
+name: Playground
+on:
+  workflow_dispatch:
+    inputs:
+      os:
+        type: choice
+        description: OS version
+        options:
+          - ubuntu-latest
+          - ubuntu-22.04
+          - ubuntu-20.04
+          - windows-latest
+          - windows-2022
+          - windows-2019
+          - macos-latest
+          - macos-13
+          - macos-12
+          - macos-11
+      shell:
+        type: choice
+        description: Shell
+        options:
+          - bash
+          - cmd
+          - powershell
+          - pwsh
+jobs:
+  action:
+    runs-on: ${{ github.event.inputs.os }}
+    steps:
+
+      # Check shell
+
+      - name: Check shell
+        shell: bash
+        if: github.event.inputs.shell != 'bash' && !startsWith(github.event.inputs.os, 'windows')
+        run: |
+          echo Shell can be changed only on Windows
+          exit 1
+
+      # Connect with ZeroTier
+
+      - uses: zerotier/github-action@v1.0.1
+        with:
+          network_id: ${{ secrets.NETWORK_ID }}
+          auth_token: ${{ secrets.ACCESS_TOKEN  }}
+
+      - uses: kildom/zerotier-management-action@v1.0.0
+        id: zerotier
+        with:
+          auth_token: ${{ secrets.ACCESS_TOKEN  }}
+          ip: '${{ secrets.IP }} ${{ vars.IP }}'
+          name: 'Actions Playground'
+
+      # Copy Github action contexts
+
+      - name: Copy Github action contexts
+        shell: bash
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          cat << 'EnDOfThIssTrIng' > $RUNNER_TEMP/contexts.json
+          {
+            "github": ${{ toJSON(github) }},
+            "env": ${{ toJSON(env) }},
+            "vars": ${{ toJSON(vars) }},
+            "job": ${{ toJSON(job) }},
+            "steps": ${{ toJSON(steps) }},
+            "runner": ${{ toJSON(runner) }},
+            "secrets": ${{ toJSON(secrets) }},
+            "needs": ${{ toJSON(needs) }},
+            "inputs": ${{ toJSON(inputs) }}
+          }
+          EnDOfThIssTrIng
+
+      # Checkout repo and keys and move to runner.temp
+
+      - name: Get main branch
+        uses: actions/checkout@v3
+        with:
+          path: repo
+
+      - name: Get keys branch
+        uses: actions/checkout@v3
+        with:
+          ref: keys
+          path: keys
+
+      - name: Keep cache keys
+        shell: bash
+        run: |
+          echo PIP_KEY=${{ github.event.inputs.os }}-${{ hashFiles('repo/scripts/requirements.txt') }}-`date +%Y%m` >> $GITHUB_ENV
+          pip3 cache dir > t || pip cache dir > t
+          echo PIP_CACHE_DIR=`cat t` >> $GITHUB_ENV
+          rm t
+
+      - name: Move repo and keys
+        shell: bash
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          mv repo $RUNNER_TEMP/
+          mv keys $RUNNER_TEMP/repo/
+
+      # Change password
+
+      - name: Password (ubuntu)
+        if: startsWith(github.event.inputs.os, 'ubuntu')
+        run: |
+          echo -e "${{ secrets.PASSWORD }}\n${{ secrets.PASSWORD }}" | sudo passwd `whoami`
+
+      - name: Password (windows)
+        shell: cmd
+        if: startsWith(github.event.inputs.os, 'windows')
+        run: |
+          net user runneradmin "${{ secrets.PASSWORD }}"
+
+      # Cache
+
+      - uses: actions/cache@v3
+        with:
+          path: ${{ env.PIP_CACHE_DIR }}
+          key: ${{ env.PIP_KEY }}
+
+      # Install Windows SSH
+
+      - name: Install SSH (windows)
+        if: startsWith(github.event.inputs.os, 'windows')
+        working-directory: ${{ runner.temp }}/repo
+        shell: cmd
+        run: |
+          curl -L -o sshd.msi https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.1.0.0p1-Beta/OpenSSH-Win64-v9.1.0.0.msi
+          msiexec /quiet /qn /i sshd.msi
+          net stop sshd
+      - name: Set cmd as default shell (windows)
+        shell: powershell
+        if: github.event.inputs.shell == 'cmd'
+        run: |
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\cmd.exe" -PropertyType String -Force
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "/c" -PropertyType String -Force
+      - name: Set powershell as default shell (windows)
+        shell: powershell
+        if: github.event.inputs.shell == 'powershell'
+        run: |
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "/c" -PropertyType String -Force
+      - name: Set pwsh as default shell (windows)
+        shell: powershell
+        if: github.event.inputs.shell == 'pwsh'
+        run: |
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Program Files\PowerShell\7\pwsh.exe" -PropertyType String -Force
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "/c" -PropertyType String -Force
+      - name: Set bash as default shell (windows)
+        shell: powershell
+        if: github.event.inputs.shell == 'bash' && startsWith(github.event.inputs.os, 'windows')
+        run: |
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Program Files\Git\usr\bin\bash.exe" -PropertyType String -Force
+          New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "-c" -PropertyType String -Force
+
+      # Python requirements
+
+      - name: Python requirements (non-windows)
+        if: (!startsWith(github.event.inputs.os, 'windows'))
+        working-directory: ${{ runner.temp }}/repo
+        run: |
+          sudo pip3 install -r scripts/requirements.txt
+
+      - name: Python requirements (windows)
+        shell: cmd
+        if: startsWith(github.event.inputs.os, 'windows')
+        working-directory: ${{ runner.temp }}/repo
+        run: |
+          pip install -r scripts/requirements.txt
+
+      # Collect env
+
+      - name: Collect env (cmd)
+        shell: cmd
+        if: startsWith(github.event.inputs.os, 'windows')
+        working-directory: ${{ runner.temp }}
+        run: |
+          python -c "import json; import os; print(json.dumps(dict(os.environ)))" > cmd_env.json
+
+      - name: Collect env
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          env > bash_env.txt
+
+      # Do rest of the work in Python, it's easier there
+
+      - name: Your work starts here (non-windows)
+        if: (!startsWith(github.event.inputs.os, 'windows'))
+        working-directory: ${{ runner.temp }}/repo
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          bash scripts/redir_fifo.sh &
+          sudo --preserve-env=RUNNER_TEMP python3 scripts/main.py --as-root
+          python3 scripts/main.py
+
+      - name: Your work starts here (windows non-bash)
+        shell: cmd
+        if: github.event.inputs.shell != 'bash' && startsWith(github.event.inputs.os, 'windows')
+        working-directory: ${{ runner.temp }}/repo
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          start /b "" node scripts\redir_pipe.js
+          start /b "" bash scripts/redir_fifo.sh
+          python scripts/main.py --as-root
+          python scripts/main.py
+
+      - name: Your work starts here (windows bash)
+        shell: bash
+        if: github.event.inputs.shell == 'bash' && startsWith(github.event.inputs.os, 'windows')
+        working-directory: ${{ runner.temp }}/repo
+        env:
+          RUNNER_TEMP: ${{ runner.temp }}
+        run: |
+          node scripts/redir_pipe.js &
+          bash scripts/redir_fifo.sh &
+          python scripts/main.py --as-root
+          python scripts/main.py
+
+      # Upload an Artifact
+
+      - name: Upload an Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ runner.temp }}/artifact/*
+          if-no-files-found: ignore
+          retention-days: 5
+
+      # Try to disconnect clients gracefully
+
+      - name: Try to disconnect clients gracefully (non-windows)
+        if: (!startsWith(github.event.inputs.os, 'windows'))
+        run: |
+          kill $(ps aux | grep sshd | grep runner | awk '{print $2}') || true
+          bash -c 'sleep 5'
+
+      - name: Try to disconnect clients gracefully (windows)
+        shell: cmd
+        if: startsWith(github.event.inputs.os, 'windows')
+        run: |
+          net stop sshd
+          bash -c 'sleep 3'
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          bash -c 'sleep 1'
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          bash -c 'sleep 1'
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          bash -c 'sleep 1'
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          bash -c 'sleep 1'
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          bash -c 'sleep 1'
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          taskkill /IM sshd.exe /T || true
+          bash -c 'sleep 7'
+          taskkill /IM sshd.exe /F || true
+          bash -c 'sleep 1'
+          taskkill /IM sshd.exe /F || true
+          bash -c 'sleep 3'
