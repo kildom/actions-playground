@@ -133,6 +133,7 @@ def allow_low_ports():
     if inputs.ubuntu:
         sshd_path = get_sshd_path()
         subprocess.run(['setcap', 'cap_net_bind_service=+ep', sshd_path], check=True)
+        subprocess.run(['setcap', 'cap_net_bind_service=+ep', str(inputs.temp_dir / 'ttyd')], check=True)
 
 def bash_escape(text):
     return re.sub(r'[^ /0-9a-zA-Z_+:;,.=\-]', lambda m: '\\n' if m.group(0) == '\n' else f'\\x{ord(m.group(0)):02x}', text)

@@ -11,10 +11,21 @@ This way, you can prepare your commands for a workflow interactively without com
 
 # Usage
 
-First, you have to do [one-time preparation](#one-time-preparations) to setup VPN, fork and authentication.
-Next, you can [start the workflow and connect to the runner](#connecting-to-the-runner) over SSH or even with RDP on Windows.
+First, you have to do [one-time preparation](#one-time-preparations) to setup VPN and your fork.
+Next, you can [start the workflow and connect to the runner](#connecting-to-the-runner) over HTTP, SSH or RDP.
 Finally, when you are connected, you can use [dedicated tools](#using-dedicated-tools-on-a-runner) to simplify
 your work on the runner.
+
+Possible connection types depends on the runner OS:
+
+| runner OS   | HTTP| SSH     | RDP |
+|-------------|-----|---------|-----|
+| **Ubuntu**  | yes | yes     | no  |
+| **macOS**   | yes | yes[^1] | no  |
+| **Windows** | yes | yes     | yes |
+
+[^1] - Only [certificate authentication](#setup-ssh-authentication) is possible, password authentication does not work.
+[^1]: Only [certificate authentication](#setup-ssh-authentication) is possible, password authentication does not work.
 
 ## One-time preparations
 
@@ -50,53 +61,37 @@ your work on the runner.
    It will generate new internal keys needed for the SSH and it will check your
    configuration.
 
-### Setup SSH authentication
-
-You have a few options here, depending on your authentication preferences.
-
-1. If you want to use password authentication **(not possible in macOS runner)**,
-   you don't need to do anything more, use a password from the `PASSWORD` secret.
-
-1. If you want to use your existing SSH public key (`*.pub`),
-   e.g. from your `~/.ssh/` directory, copy its content to the `CLIENT_KEY` secret.
-
-1. If you want to use a new SSH key that was automatically generated,
-   you can go back to `Generate New Keys` workflow (don't run it again),
-   go to last run summary and download the artifact. Open it using a password from
-   the `PASSWORD` secret. You will have there a new private key that you can later use
-   to connect over the SSH.
-
-1. If you want to generate your own SSH key pair (e.g. using instructions from
-   [Generating a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)),
-   you have to copy newly generated public key to the `CLIENT_KEY` secret.
-
-1. You can combine above methods multiple times. The `CLIENT_KEY` secret
-   accepts multiple public keys, one key per line.
+1. If you want to use certificate authentication in the SSH, you have to configure it.
+   See *[Setup SSH authentication](#setup-ssh-authentication)*, for details.
 
 ## Connecting to the runner
 
 1. Go to your fork's `Actions`, select `Playground` workflow and `Run workflow`.
    You can select which OS you want to start. For Windows, you can select
-   default shell that will be available over SSH.
+   default shell that will be available over HTTP and SSH.
 
 1. Runner will be ready to connect after approx. 2 min, when the `Your work starts here` step is running.
 
-1. Connect to your runner over SSH. You can use `IP` configured previously and user name:
-   * `runner` on Ubuntu and macOS,
-   * `runneradmin` on Windows,
+1. Connect to your runner over HTTP, SSH or RDP. 
+   * Address: configured previously in the repository's `IP` variable/secret,
+   * User name:`runner` on Ubuntu and macOS, `runneradmin` on Windows,
+   * Password: configured previously in the repository's `PASSWORD` secret.
 
-   For example, to connect Ubuntu or macOS runner:
-   ```
-   ssh runner@<your runner ip address>
-   ```
-   If you have a private key in a file, you can add `-i <path to private key>` option.
+   For example, to connect:
 
-1. On Windows runner, you can use RDP. User is `runneradmin`,
-   password is the same as `PASSWORD` secret.
+   * over HTTP, type the following address to your browser:
+      ```
+      http://<your runner ip address>/
+      ```
 
-   Don't close any windows that were already opened there. You may loose connection.
+   * over SSH to Ubuntu or macOS runner:
+     ```
+     ssh runner@<your runner ip address>
+     ```
+     If you have a private key in a file, you can add `-i <path to private key>` option.
 
-1. To end the action, use following command:
+
+1. When you are done, use following command to end the action:
    ```
    exit_job
    ```
@@ -119,7 +114,9 @@ You can play with the runner now.
 
 . load_job
     Load environment variables that are available inside job steps, for
-    example variables starting with the "GITHUB_" prefix.
+    example variables starting with the "GITHUB_" prefix. If you are
+    connecting over HTTP the environment is already loaded, you can
+    skip this command.
 
 /tmp/log
     A FIFO that redirects everything from it to the log on GitHub Action.
@@ -171,7 +168,9 @@ exit_job
 
 load_job
     Load environment variables that are available inside job steps, for
-    example variables starting with the "GITHUB_" prefix.
+    example variables starting with the "GITHUB_" prefix. If you are
+    connecting over HTTP the environment is already loaded, you can
+    skip this command.
 
 \\.\pipe\log
     A named pipe that redirects everything from it to the log on GitHub Action.
@@ -197,3 +196,27 @@ ghctx
 ------------------------------------------------------------------------------
 ```
 <!--! !-->
+
+
+## Setup SSH authentication
+
+This is needed only if you want to use certificate authentication in SSH.
+You can skip this, if you want to use SSH password authentication, RDP or HTTP.
+
+You have a few options here, depending on your authentication preferences:
+
+1. If you want to use your existing SSH public key (`*.pub`),
+   e.g. from your `~/.ssh/` directory, copy its content to the `CLIENT_KEY` secret.
+
+1. If you want to use a new SSH key that was automatically generated,
+   you can go back to `Generate New Keys` workflow (don't run it again),
+   go to last run summary and download the artifact. Open it using a password from
+   the `PASSWORD` secret. You will have there a new private key that you can later use
+   to connect over the SSH.
+
+1. If you want to generate your own SSH key pair (e.g. using instructions from
+   [Generating a new SSH key](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#generating-a-new-ssh-key)),
+   you have to copy newly generated public key to the `CLIENT_KEY` secret.
+
+1. You can combine above methods multiple times. The `CLIENT_KEY` secret
+   accepts multiple public keys, one key per line.

@@ -136,24 +136,28 @@ jobs:
         shell: powershell
         if: github.event.inputs.shell == 'cmd'
         run: |
+          echo "TTYD_SHELL=C:\Windows\System32\cmd.exe" >> $ENV:GITHUB_ENV
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\cmd.exe" -PropertyType String -Force
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "/c" -PropertyType String -Force
       - name: Set powershell as default shell (windows)
         shell: powershell
         if: github.event.inputs.shell == 'powershell'
         run: |
+          echo "TTYD_SHELL=C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" >> $ENV:GITHUB_ENV
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -PropertyType String -Force
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "/c" -PropertyType String -Force
       - name: Set pwsh as default shell (windows)
         shell: powershell
         if: github.event.inputs.shell == 'pwsh'
         run: |
+          echo "TTYD_SHELL=C:\Program Files\PowerShell\7\pwsh.exe" >> $ENV:GITHUB_ENV
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Program Files\PowerShell\7\pwsh.exe" -PropertyType String -Force
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "/c" -PropertyType String -Force
       - name: Set bash as default shell (windows)
         shell: powershell
         if: github.event.inputs.shell == 'bash' && startsWith(github.event.inputs.os, 'windows')
         run: |
+          echo "TTYD_SHELL=C:\Program Files\Git\usr\bin\bash.exe" >> $ENV:GITHUB_ENV
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value "C:\Program Files\Git\usr\bin\bash.exe" -PropertyType String -Force
           New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShellCommandOption -Value "-c" -PropertyType String -Force
 
@@ -187,6 +191,32 @@ jobs:
         run: |
           env > bash_env.txt
 
+      # Download ttyd
+
+      - name: Download ttyd (windows)
+        shell: cmd
+        if: startsWith(github.event.inputs.os, 'windows')
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -L https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.win32.exe --output ttyd.exe
+          net stop /y W3SVC
+          netsh advfirewall firewall add rule name="Open Port 80" dir=in action=allow protocol=TCP localport=80
+
+      - name: Download ttyd (ubuntu)
+        if: startsWith(github.event.inputs.os, 'ubuntu')
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl -L https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 --output ttyd
+          chmod 755 ttyd
+          echo TTYD_CMD=${{ runner.temp }}/ttyd >> $GITHUB_ENV
+
+      - name: Download ttyd (macos)
+        if: startsWith(github.event.inputs.os, 'macos')
+        working-directory: ${{ runner.temp }}
+        run: |
+          brew install ttyd
+          echo TTYD_CMD=ttyd >> $GITHUB_ENV
+
       # Do rest of the work in Python, it's easier there
 
       - name: Your work starts here (non-windows)
@@ -197,6 +227,7 @@ jobs:
         run: |
           bash scripts/redir_fifo.sh &
           sudo --preserve-env=RUNNER_TEMP python3 scripts/main.py --as-root
+          ${{ env.TTYD_CMD }} -d 0 -p 80 -w '${{ github.workspace }}' -c 'runner:${{ secrets.PASSWORD }}' bash &
           python3 scripts/main.py
 
       - name: Your work starts here (windows non-bash)
@@ -209,6 +240,7 @@ jobs:
           start /b "" node scripts\redir_pipe.js
           start /b "" bash scripts/redir_fifo.sh
           python scripts/main.py --as-root
+          start /b "" %RUNNER_TEMP%\ttyd.exe -d 0 -p 80 -w "${{ github.workspace }}" -c "runneradmin:${{ secrets.PASSWORD }}" "${{ env.TTYD_SHELL }}"
           python scripts/main.py
 
       - name: Your work starts here (windows bash)
@@ -217,10 +249,12 @@ jobs:
         working-directory: ${{ runner.temp }}/repo
         env:
           RUNNER_TEMP: ${{ runner.temp }}
+          TTYD_SHELL: ${{ env.TTYD_SHELL }}
         run: |
           node scripts/redir_pipe.js &
           bash scripts/redir_fifo.sh &
           python scripts/main.py --as-root
+          $RUNNER_TEMP/ttyd.exe -d 0 -p 80 -w `ghctx -p github.workspace` -c 'runneradmin:${{ secrets.PASSWORD }}' "$TTYD_SHELL" &
           python scripts/main.py
 
       # Upload an Artifact

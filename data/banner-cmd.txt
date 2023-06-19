@@ -11,7 +11,9 @@ exit_job
 
 load_job
     Load environment variables that are available inside job steps, for
-    example variables starting with the "GITHUB_" prefix.
+    example variables starting with the "GITHUB_" prefix. If you are
+    connecting over HTTP the environment is already loaded, you can
+    skip this command.
 
 \\.\pipe\log
     A named pipe that redirects everything from it to the log on GitHub Action.

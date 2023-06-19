@@ -8,7 +8,9 @@ You can play with the runner now.
 
 . load_job
     Load environment variables that are available inside job steps, for
-    example variables starting with the "GITHUB_" prefix.
+    example variables starting with the "GITHUB_" prefix. If you are
+    connecting over HTTP the environment is already loaded, you can
+    skip this command.
 
 /tmp/log
     A FIFO that redirects everything from it to the log on GitHub Action.
