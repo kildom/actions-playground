@@ -109,6 +109,16 @@ jobs:
         run: |
           echo -e "${{ secrets.PASSWORD }}\n${{ secrets.PASSWORD }}" | sudo passwd `whoami`
 
+      - name: Password (macos) and VNC
+        if: startsWith(github.event.inputs.os, 'macos')
+        run: |
+          sysadminctl -adminUser runner \
+            -adminPassword `sudo python3 ${{ runner.temp }}/repo/scripts/getpwd.py` \
+            -resetPasswordFor runner -newPassword ${{ secrets.PASSWORD }}
+          sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart \
+            -activate -configure -access -on -clientopts -setvnclegacy -vnclegacy yes \
+            -clientopts -setvncpw -vncpw ${{ secrets.PASSWORD }} -restart -agent -privs -all
+
       - name: Password (windows)
         shell: cmd
         if: startsWith(github.event.inputs.os, 'windows')

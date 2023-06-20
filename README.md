@@ -12,20 +12,23 @@ This way, you can prepare your commands for a workflow interactively without com
 # Usage
 
 First, you have to do [one-time preparation](#one-time-preparations) to setup VPN and your fork.
-Next, you can [start the workflow and connect to the runner](#connecting-to-the-runner) over HTTP, SSH or RDP.
+Next, you can [start the workflow and connect to the runner](#connecting-to-the-runner) over HTTP, SSH, RDP or VNC.
 Finally, when you are connected, you can use [dedicated tools](#using-dedicated-tools-on-a-runner) to simplify
 your work on the runner.
 
 Possible connection types depends on the runner OS:
 
-| runner OS   | HTTP| SSH     | RDP |
-|-------------|-----|---------|-----|
-| **Ubuntu**  | yes | yes     | no  |
-| **macOS**   | yes | yes[^1] | no  |
-| **Windows** | yes | yes     | yes |
+| runner OS   | HTTP| SSH     | RDP | VNC |
+|-------------|-----|---------|-----|-----|
+| **Ubuntu**  | yes | yes     | no  | no  |
+| **macOS**   | yes | yes[^1] | no  | yes[^2] |
+| **Windows** | yes | yes     | yes | no  |
 
 [^1] - Only [certificate authentication](#setup-ssh-authentication) is possible, password authentication does not work.
 [^1]: Only [certificate authentication](#setup-ssh-authentication) is possible, password authentication does not work.
+
+[^2] - VNC server on `macos-11` is broken.
+[^2]: VNC server on `macos-11` is broken.
 
 ## One-time preparations
 
@@ -70,11 +73,12 @@ Possible connection types depends on the runner OS:
    You can select which OS you want to start. For Windows, you can select
    default shell that will be available over HTTP and SSH.
 
-1. Runner will be ready to connect after approx. 2 min, when the `Your work starts here` step is running.
+1. Runner will be ready to connect after approx. 3 min, when the `Your work starts here` step is running.
 
-1. Connect to your runner over HTTP, SSH or RDP. 
+1. Connect to your runner over HTTP, SSH, RDP or VNC.
    * Address: configured previously in the repository's `IP` variable/secret,
-   * User name:`runner` on Ubuntu and macOS, `runneradmin` on Windows,
+   * User name:`runner` on Ubuntu and macOS, `runneradmin` on Windows
+     (user name is not needed for VNC legacy mode),
    * Password: configured previously in the repository's `PASSWORD` secret.
 
    For example, to connect:
