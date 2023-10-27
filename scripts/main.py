@@ -39,8 +39,11 @@ def render_root_templates():
         render_template(inputs.data_dir / 'ghctx.bat.jinja', inputs.bin_dir / 'ghctx.bat')
 
 def write_client_keys():
-    keys = inputs.contexts['secrets']['CLIENT_KEY']
-    keys += '\n' + (inputs.keys_dir / 'client_key.pub').read_text()
+    if 'CLIENT_KEY' in inputs.contexts['secrets']:
+        keys = inputs.contexts['secrets']['CLIENT_KEY'] + '\n'
+    else:
+        keys = ''
+    keys += (inputs.keys_dir / 'client_key.pub').read_text()
     keys = re.sub(f'(?:\s*[\r\n])+\s*', '\n', keys.strip()) + '\n'
     (inputs.keys_dir / 'authorized_keys').write_text(keys)
 
