@@ -231,7 +231,7 @@ jobs:
         if: startsWith(github.event.inputs.os, 'macos')
         working-directory: ${{ runner.temp }}
         run: |
-          brew install ttyd
+          brew install ttyd@1.7.3
           echo TTYD_CMD=ttyd >> $GITHUB_ENV
 
       # Do rest of the work in Python, it's easier there
