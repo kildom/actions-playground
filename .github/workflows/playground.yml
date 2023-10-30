@@ -29,6 +29,11 @@ jobs:
     runs-on: ${{ github.event.inputs.os }}
     steps:
 
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+          
       # Check shell
 
       - name: Check shell
