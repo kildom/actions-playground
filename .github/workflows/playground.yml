@@ -29,6 +29,8 @@ jobs:
     runs-on: ${{ github.event.inputs.os }}
     steps:
 
+      # Setup Java
+
       - uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
@@ -213,7 +215,7 @@ jobs:
         if: startsWith(github.event.inputs.os, 'windows')
         working-directory: ${{ runner.temp }}
         run: |
-          curl -L https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.win32.exe --output ttyd.exe
+          curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.win32.exe --output ttyd.exe
           net stop /y W3SVC
           netsh advfirewall firewall add rule name="Open Port 80" dir=in action=allow protocol=TCP localport=80
 
@@ -221,7 +223,7 @@ jobs:
         if: startsWith(github.event.inputs.os, 'ubuntu')
         working-directory: ${{ runner.temp }}
         run: |
-          curl -L https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.x86_64 --output ttyd
+          curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.3/ttyd.x86_64 --output ttyd
           chmod 755 ttyd
           echo TTYD_CMD=${{ runner.temp }}/ttyd >> $GITHUB_ENV
 
